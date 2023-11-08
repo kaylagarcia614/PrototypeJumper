@@ -1,6 +1,6 @@
 title = "jumper";
 
-description = `Jump to avoid the enemies!`;
+description = `Jump to avoid\n\n the enemies`;
 
 characters = [];
 
@@ -12,63 +12,77 @@ const G = {
 options = {
   viewSize: { x: G.WIDTH, y: G.HEIGHT },
   theme: "dark",
+  isReplayEnabled: true
 };
 
-/**
- * @typedef {{
- * pos: Vector,
- * vy: number
- * }} Player
- */
-/**
- * @type { Player }
- */
 let player;
-
-/**
- * @typedef {{
- * pos: Vector
- * }} Enemy
- */
-/**
- * @type { Enemy[] }
- */
-let enemies;
+let enemies = [];
+let enemyCreationInterval = 60;
+let gameOver = false; // Add a gameOver flag
 
 function update() {
-  if (!ticks) {
-    player = {
-      pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
-      vy: 0, // Vertical velocity for jumping
-    };
+  if (!gameOver) { // Only update the game if it's not over
+    if (!ticks) {
+      player = {
+        pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
+        vy: 0,
+      };
+    }
+
+    if (ticks % enemyCreationInterval === 0) {
+      createEnemy(G.WIDTH, rnd(0, G.HEIGHT), rnd(1, 4));
+      createEnemy(0, rnd(0, G.HEIGHT), -rnd(1, 4));
+    }
+
+    // Check for collisions between the player and enemies
+    remove(enemies, (e) => {
+      e.pos.x -= e.speed;
+      if (e.pos.x < 0 || e.pos.x > G.WIDTH) {
+        score++;
+        return true;
+      }
+
+      if (playerHitEnemy(player, e)) {
+        end();
+      }
+
+      color("red");
+      box(e.pos, 6, 6);
+    });
+
+    player.vy += 0.5;
+    if (player.vy > 2) {
+      player.vy = 2;
+    }
+    player.pos.y += player.vy;
+
+    if (player.pos.y > G.HEIGHT) {
+      player.pos.y = 0;
+    } else if (player.pos.y < 0) {
+      player.pos.y = G.HEIGHT;
+    }
+
     color("cyan");
+    box(player.pos, 3);
+
+    if (input.isJustPressed) {
+      playerJump();
+    }
   }
+}
 
-  // Apply gravity to the player
-  player.vy += 0.5; // You can adjust this value to control the gravity strength
-  // Limit the maximum falling speed to 5
-  if (player.vy > 2) {
-    player.vy = 2;
-  }
-  player.pos.y += player.vy;
+// Function to check for collision between the player and an enemy
+function playerHitEnemy(player, enemy) {
+  return player.pos.distanceTo(enemy.pos) < 6; // Adjust the collision radius as needed
+}
 
-  // Wrap the player around the screen vertically
-  if (player.pos.y > G.HEIGHT) {
-    player.pos.y = 0;
-  } else if (player.pos.y < 0) {
-    player.pos.y = G.HEIGHT;
-  }
+function playerJump() {
+  player.vy = -5;
+}
 
-  box(player.pos, 3);
-
-  if (input.isJustPressed) {
-    playerJump();
-  }
-
-  function playerJump() {
-    // Apply an upward force when the player jumps
-    player.vy = -5; // You can adjust this value for the jump height
-  }
-
-  console.log("score: " + score);
+function createEnemy(x, y, speed) {
+  enemies.push({
+    pos: vec(x, y),
+    speed: speed,
+  });
 }
